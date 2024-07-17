@@ -9,25 +9,25 @@ variable "mysql_root_password" {
 
 variable "mysql_database" {
   type    = string
-  default = "myworkdb"
+  default = "mysql-service"
 }
 
-# variable "spring_boot_image" {
-#   type    = string
-#   default = "spring-boot-app:latest"
-# }
+variable "spring_boot_image" {
+  type    = string
+  default = "spring-boot-app:latest"
+}
 
-# resource "kubernetes_config_map" "spring_boot_config" {
-#   metadata {
-#     name = "spring-boot-config"
-#   }
+resource "kubernetes_config_map" "spring_boot_config" {
+  metadata {
+    name = "spring-boot-config"
+  }
 
-#   data = {
-#     SPRING_DATASOURCE_URL      = "jdbc:mysql://mysql-service:3306/${var.mysql_database}"
-#     SPRING_DATASOURCE_USERNAME = "root"
-#     SPRING_DATASOURCE_PASSWORD = var.mysql_root_password
-#   }
-# }
+  data = {
+    SPRING_DATASOURCE_HOST = var.mysql_database
+    SPRING_DATASOURCE_USERNAME = "root"
+    SPRING_DATASOURCE_PASSWORD = var.mysql_root_password
+  }
+}
 
 resource "kubernetes_secret" "mysql_secret" {
   metadata {
@@ -109,63 +109,64 @@ resource "kubernetes_service" "mysql_service" {
   }
 }
 
-# resource "kubernetes_deployment" "spring_boot_app" {
-#   metadata {
-#     name = "spring-boot-app"
-#   }
+resource "kubernetes_deployment" "spring_boot_app" {
+  metadata {
+    name = "spring-boot-app"
+  }
 
-#   spec {
-#     replicas = 1
+  spec {
+    replicas = 1
 
-#     selector {
-#       match_labels = {
-#         app = "spring-boot-app"
-#       }
-#     }
+    selector {
+      match_labels = {
+        app = "spring-boot-app"
+      }
+    }
 
-#     template {
-#       metadata {
-#         labels = {
-#           app = "spring-boot-app"
-#         }
-#       }
+    template {
+      metadata {
+        labels = {
+          app = "spring-boot-app"
+        }
+      }
 
-#       spec {
-#         container {
-#           name  = "spring-boot-app"
-#           image = var.spring_boot_image
+      spec {
+        container {
+          name  = "spring-boot-app"
+          image = var.spring_boot_image
+          image_pull_policy = "IfNotPresent"
 
-#           port {
-#             container_port = 8080
-#           }
+          port {
+            container_port = 8080
+          }
 
-#           env_from {
-#             config_map_ref {
-#               name = "spring-boot-config"
-#             }
-#           }
-#         }
-#       }
-#     }
-#   }
-# }
+          env_from {
+            config_map_ref {
+              name = "spring-boot-config"
+            }
+          }
+        }
+      }
+    }
+  }
+}
 
-# resource "kubernetes_service" "spring_boot_service" {
-#   metadata {
-#     name = "spring-boot-service"
-#   }
+resource "kubernetes_service" "spring_boot_service" {
+  metadata {
+    name = "spring-boot-service"
+  }
 
-#   spec {
-#     type = "NodePort"
+  spec {
+    type = "NodePort"
 
-#     selector = {
-#       app = "spring-boot-app"
-#     }
+    selector = {
+      app = "spring-boot-app"
+    }
 
-#     port {
-#       port        = 8080
-#       target_port = 8080
-#       node_port   = 30007
-#     }
-#   }
-# }
+    port {
+      port        = 8080
+      target_port = 8080
+      node_port   = 30007
+    }
+  }
+}
