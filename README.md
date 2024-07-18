@@ -2,6 +2,8 @@
 
 ## InfraStructure Repository
 
+[mywork-api-server](https://github.com/skajd1/mywork-api-server) 이 레포를 clone 받아 dockerizing 후, 테스트할 수 있습니다.
+
 ### k8s API 서버 배포
 - Environment - Terraform
 - Language - Java 17(Spring boot 3)
@@ -43,7 +45,28 @@ terraform destroy
 ```
 
 ### Architecture
+DB와 API서버만 파드로 간단하게 배포하였습니다.
+```
+$ kubectl get all
+NAME                                   READY   STATUS    RESTARTS      AGE
+pod/mysql-5f978c84b8-dq5v4             1/1     Running   0             28m
+pod/spring-boot-app-7fb56979b4-84gz2   1/1     Running   2 (28m ago)   28m
 
+NAME                          TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+service/kubernetes            ClusterIP   10.96.0.1        <none>        443/TCP          47h
+service/mysql-service         ClusterIP   10.106.181.108   <none>        3306/TCP         28m
+service/spring-boot-service   NodePort    10.107.214.26    <none>        8080:30007/TCP   28m
+
+NAME                              READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/mysql             1/1     1            1           28m
+deployment.apps/spring-boot-app   1/1     1            1           28m
+
+NAME                                         DESIRED   CURRENT   READY   AGE
+replicaset.apps/mysql-5f978c84b8             1         1         1       28m
+replicaset.apps/spring-boot-app-7fb56979b4   1         1         1       28m
+```
+
+![infrastructure](https://github.com/user-attachments/assets/473e062d-6171-4387-bd4d-5f261d990716)
 
 
 
