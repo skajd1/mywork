@@ -9,6 +9,11 @@ variable "mysql_root_password" {
 
 variable "mysql_database" {
   type    = string
+  default = "myworkdb"
+}
+
+variable "mysql_host" {
+  type   = string
   default = "mysql-service"
 }
 
@@ -23,9 +28,10 @@ resource "kubernetes_config_map" "spring_boot_config" {
   }
 
   data = {
-    SPRING_DATASOURCE_HOST = var.mysql_database
-    SPRING_DATASOURCE_USERNAME = "root"
+    SPRING_DATASOURCE_HOST = var.mysql_host
+    SPRING_DATASOURCE_USERNAME = "skajd1"
     SPRING_DATASOURCE_PASSWORD = var.mysql_root_password
+    SPRING_DATASOURCE_DATABASE = var.mysql_database
   }
 }
 
@@ -35,7 +41,6 @@ resource "kubernetes_secret" "mysql_secret" {
   }
 
   data = {
-    username = base64encode("root")
     password = base64encode(var.mysql_root_password)
   }
 }
@@ -61,6 +66,12 @@ resource "kubernetes_deployment" "mysql" {
       }
 
       spec {
+        volume {
+          name = "mysql-initdb"
+          config_map {
+            name = kubernetes_config_map.mysql_init_script.metadata[0].name
+          }
+        }
         container {
           name  = "mysql"
           image = "mysql:5.7"
@@ -74,11 +85,12 @@ resource "kubernetes_deployment" "mysql" {
               }
             }
           }
-
-          env {
-            name  = "MYSQL_DATABASE"
-            value = var.mysql_database
+          
+          volume_mount {
+            name      = "mysql-initdb"
+            mount_path = "/docker-entrypoint-initdb.d"
           }
+          
 
           port {
             container_port = 3306
@@ -86,7 +98,6 @@ resource "kubernetes_deployment" "mysql" {
 
           
         }
-
       }
     }
   }
@@ -110,6 +121,7 @@ resource "kubernetes_service" "mysql_service" {
 }
 
 resource "kubernetes_deployment" "spring_boot_app" {
+  depends_on = [kubernetes_deployment.mysql]
   metadata {
     name = "spring-boot-app"
   }
@@ -170,3 +182,20 @@ resource "kubernetes_service" "spring_boot_service" {
     }
   }
 }
+resource "kubernetes_config_map" "mysql_init_script" {
+  metadata {
+    name = "mysql-init-script"
+  }
+
+  data = {
+    "init.sql" = <<-EOT
+
+      CREATE DATABASE IF NOT EXISTS myworkdb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    
+      CREATE USER 'skajd1'@'%' IDENTIFIED BY '${var.mysql_root_password}';
+      GRANT ALL PRIVILEGES ON myworkdb.* TO 'skajd1'@'%';
+      FLUSH PRIVILEGES;
+    EOT
+  }
+}
+
